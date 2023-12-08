@@ -29,12 +29,6 @@ segmenter = Segmenter()
 ner_tagger = NewsNERTagger(emb)
 morph_vocab = MorphVocab()
 
-with open('models/task_vectorizer.pkl', 'rb') as file:
-    task_vectorizer = cloudpickle.load(file)
-
-with open('models/task_classifier.pkl', 'rb') as file:
-    task_classifier = cloudpickle.load(file)
-
 
 # Функция получения текста титульного листа
 def get_title_page_text(text):
@@ -278,6 +272,13 @@ def introduction_conclusion_extract(lines):
 
 
 def dock_processing(url_dock_address):
+
+    with open('models/task_vectorizer.pkl', 'rb') as file:
+        task_vectorizer = cloudpickle.load(file)
+
+    with open('models/task_classifier.pkl', 'rb') as file:
+        task_classifier = cloudpickle.load(file)
+
     # Извлечение ФИО:
     # Загрузка .word документа и преобразование в .txt
     text = docx2txt.process(f'{url_dock_address}')
