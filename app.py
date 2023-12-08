@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from package_NLP import dock_processing
 
 app = Flask(__name__)
