@@ -1,5 +1,6 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from package_NLP import dock_processing
+import json
 
 app = Flask(__name__)
 
@@ -13,7 +14,8 @@ def get_data():
 
     try:
         json_dock_data = dock_processing(url)
-        return json_dock_data
+        # Возвращаем данные в ответе Flask
+        return Response(json_dock_data, content_type='application/json; charset=utf-8')
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

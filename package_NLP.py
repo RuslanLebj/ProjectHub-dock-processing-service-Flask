@@ -359,5 +359,6 @@ def dock_processing(url_dock_address):
         "keywords": keyword_list,
         "annotation_sentences": annotation_sentences_list
     }
-    packed_data_json = json.dumps(data_to_pack)
+    # Сериализуем словарь в формат JSON с декодированием символов
+    packed_data_json = json.dumps(data_to_pack, ensure_ascii=False)
     return packed_data_json
