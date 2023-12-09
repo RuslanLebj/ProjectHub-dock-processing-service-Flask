@@ -1,8 +1,14 @@
+import nltk
 from flask import Flask, request, jsonify, Response
 from package_NLP import dock_processing
-import json
 
 app = Flask(__name__)
+
+# Проверка установки необходимых пакетов
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    nltk.download('punkt')
 
 
 @app.route('/data', methods=['GET'])
