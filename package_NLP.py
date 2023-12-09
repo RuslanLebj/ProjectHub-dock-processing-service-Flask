@@ -231,7 +231,7 @@ def conclusion_selector(lines):
     return chapter_lines
 
 
-def summarize_sumy(text, sentence_count, Summarizer, stemming=False, stop_words=False):
+def summarize_sumy(text, sentence_count, Summarizer, stemming=False, stop_words=None):
     parser = PlaintextParser.from_string(text, Tokenizer("russian"))
 
     if stemming:
@@ -240,8 +240,8 @@ def summarize_sumy(text, sentence_count, Summarizer, stemming=False, stop_words=
     else:
         summarizer = Summarizer()
 
-    if stop_words:
-        summarizer.stop_words = frozenset(nltk.corpus.stopwords.words("russian"))
+    if stop_words is not None:
+        summarizer.stop_words = frozenset(stop_words)
 
     summary = summarizer(parser.document, sentence_count)
     return summary
@@ -273,11 +273,14 @@ def introduction_conclusion_extract(lines):
 
 def dock_processing(url_dock_address):
 
-    with open('models/task_vectorizer.pkl', 'rb') as file:
+    with open('static/models/task_vectorizer.pkl', 'rb') as file:
         task_vectorizer = cloudpickle.load(file)
 
-    with open('models/task_classifier.pkl', 'rb') as file:
+    with open('static/models/task_classifier.pkl', 'rb') as file:
         task_classifier = cloudpickle.load(file)
+
+    with open('static/stopwords/russian_stopwords.pkl', 'rb') as file:
+        stopwords = cloudpickle.load(file)
 
     # Извлечение ФИО:
     # Загрузка .word документа и преобразование в .txt
@@ -345,7 +348,7 @@ def dock_processing(url_dock_address):
     introduction_conclusion_text = "\n".join(introduction_conclusion_lines)
     sentence_count = 5
     sumy_summarizer = TextRankSummarizer
-    summary = summarize_sumy(introduction_conclusion_text, sentence_count, sumy_summarizer, True, True)
+    summary = summarize_sumy(introduction_conclusion_text, sentence_count, sumy_summarizer, True, stopwords)
     annotation_sentences_list = []
     for sentence in summary:
         annotation_sentences_list.append(str(sentence))
