@@ -316,19 +316,19 @@ def dock_processing(url_dock_address):
     for i, row in df_classified_sentences.iterrows():
         if row['class'] == 1:
             tasks_list.append(row['sentence'])
-        # Удалим дубликаты
-        tasks_list = set(tasks_list)
+    # Удалим дубликаты
+    tasks_list = list(set(tasks_list))
 
     # Извлечение технологий из задач:
     technology_list = []
-    technology_extractor = spacy.load("static/models/ru_core_news_technologies_md")  # загрузка модели
+    technology_extractor = spacy.load("static/models/ru_core_news_technologies_md")  # загрузка обученной модели
     for task in tasks_list:
-        tasks_technology_list = []
         doc = technology_extractor(task)
         for entity in doc.ents:
-            if entity.label_ == "PRODUCT":  # фильтрация сущностей, относящихся к продуктам/технологиям
-                tasks_technology_list.append(entity.text)
-        technology_list.append(tasks_technology_list)
+            if entity.label_ == "TECHNOLOGY":  # фильтрация сущностей, относящихся к технологиям
+                technology_list.append(entity.text)
+    # Удалим дубликаты
+    technology_list = list(set(technology_list))
 
     # Извлечение аннотации:
     # Выделим необходимые главы
