@@ -272,7 +272,6 @@ def introduction_conclusion_extract(lines):
 
 
 def dock_processing(url_dock_address):
-
     with open('static/models/task_vectorizer.pkl', 'rb') as file:
         task_vectorizer = cloudpickle.load(file)
 
@@ -282,7 +281,7 @@ def dock_processing(url_dock_address):
     with open('static/stopwords/russian_stopwords.pkl', 'rb') as file:
         stopwords = cloudpickle.load(file)
 
-    # Извлечение ФИО:
+# Извлечение ФИО:
     # Загрузка .word документа и преобразование в .txt
     text = docx2txt.process(f'{url_dock_address}')
     # Извлечение титульного листа
@@ -302,38 +301,27 @@ def dock_processing(url_dock_address):
     tasks_chapter_lines = chapter_selector(preprocessed_text_lines, tasks_chapter_number)
     # Произведем токенизацию на предложения
     tasks_chapter_sentences = lines_to_sentences_tokenization(tasks_chapter_lines)
+    # Предобработаем предложения и добавим в таблицу
+    df_preprocessed_sentences = df_sentences_preprocessing(
+        pd.DataFrame({"sentence": tasks_chapter_sentences, "class": [0 for _ in range(len(tasks_chapter_sentences))]}))
     # Векторизируем
-    X = task_vectorizer.transform(tasks_chapter_sentences)
+    X = task_vectorizer.transform(df_preprocessed_sentences["sentence"])
     # Классифицируем предложения:
     y = task_classifier.predict(X)
     # Создадим таблицу с классами предложений
     df_classified_sentences = df_sentences_preprocessing(
-        pd.DataFrame({"sentence": tasks_chapter_sentences, "class": y}))
+        pd.DataFrame({"sentence": df_preprocessed_sentences["sentence"], "class": y}))
     # Сохраним задачи в список
     tasks_list = []
     for i, row in df_classified_sentences.iterrows():
         if row['class'] == 1:
             tasks_list.append(row['sentence'])
-
-    # Извлечение ключевых слов:
-    # Выделим необходимые главы
-    introduction_conclusion_lines = introduction_conclusion_extract(preprocessed_text_lines)
-    # Произведем токенизацию на предложения
-    sentences_for_keywords = lines_to_sentences_tokenization(introduction_conclusion_lines)
-    # Преобразуем строки в цельный текст
-    text_for_keywords = ' '.join(sentences_for_keywords)
-    # Экстрактору Yake модели зададим параметры:
-    # Русскоязычная модель, фраза размерностью 2, мера схожести слов не более 50%, извелчение в количестве 10 фраз
-    yakeModel = KeywordExtractor(lan="ru", n=2, dedupLim=0.5, top=10)
-    # Извлечем ключевые слова
-    yake_keywords = yakeModel.extract_keywords(text_for_keywords)
-    keyword_list = []
-    for score, keyword in yake_keywords:
-        keyword_list.append(score)
+        # Удалим дубликаты
+        tasks_list = set(tasks_list)
 
     # Извлечение технологий из задач:
     technology_list = []
-    technology_extractor = spacy.load("en_core_web_sm")  # загрузка модели языка
+    technology_extractor = spacy.load("static/models/ru_core_news_technologies_md")  # загрузка модели
     for task in tasks_list:
         tasks_technology_list = []
         doc = technology_extractor(task)
@@ -343,6 +331,8 @@ def dock_processing(url_dock_address):
         technology_list.append(tasks_technology_list)
 
     # Извлечение аннотации:
+    # Выделим необходимые главы
+    introduction_conclusion_lines = introduction_conclusion_extract(preprocessed_text_lines)
     introduction_conclusion_lines = [s for s in introduction_conclusion_lines if
                                      not re.search(".*изуч|осво|навык|умен|опыт|защит|квалиф|компетен.*", s.lower())]
     introduction_conclusion_text = "\n".join(introduction_conclusion_lines)
@@ -352,6 +342,18 @@ def dock_processing(url_dock_address):
     annotation_sentences_list = []
     for sentence in summary:
         annotation_sentences_list.append(str(sentence))
+
+    # Извлечение ключевых слов из аннотации:
+    # Преобразуем строки в цельный текст
+    text_for_keywords = ' '.join(annotation_sentences_list)
+    # Экстрактору Yake модели зададим параметры:
+    # Русскоязычная модель, фраза размерностью 2, мера схожести слов не более 50%, извелчение в количестве 10 фраз
+    yakeModel = KeywordExtractor(lan="ru", n=2, dedupLim=0.5, top=10)
+    # Извлечем ключевые слова
+    yake_keywords = yakeModel.extract_keywords(text_for_keywords)
+    keyword_list = []
+    for score, keyword in yake_keywords:
+        keyword_list.append(score)
 
     # Упаковка списков в json
     data_to_pack = {
