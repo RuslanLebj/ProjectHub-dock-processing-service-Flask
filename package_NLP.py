@@ -250,24 +250,25 @@ def summarize_sumy(text, sentence_count, Summarizer, stemming=False, stop_words=
 def introduction_conclusion_extract(lines):
     chapter_started = False
     chapter_lines = []
-    strings_to_find = ["заключение", "введение"]
     strings_to_stop = ["список литературы", "глава", "библиографический список"]
-    string_article_ends = ["список литературы", "библиографический список"]
-    article_ends = 0
+    string_article_ends = ["список литературы", "библиографический список", "приложения"]
+    introduction_started = 0
+    conclusion_started = 0
     for line in lines:
         if not chapter_started:
-            if any(s in line.lower() for s in strings_to_find):
+            if 'введение' in line.lower() and introduction_started < 2:
+                introduction_started += 1
+                chapter_started = True
+            elif 'заключение' in line.lower() and conclusion_started < 2:
+                conclusion_started += 1
                 chapter_started = True
         else:
-            if any(s in line.lower() for s in strings_to_stop):
+            if any(s in line.lower() for s in string_article_ends) and conclusion_started == 2:
+                break
+            elif any(s in line.lower() for s in strings_to_stop):
                 chapter_started = False
-                if any(s in line.lower() for s in string_article_ends):
-                    article_ends += 1
-                    if (article_ends > 1):
-                        break
             else:
                 chapter_lines.append(line)
-
     return chapter_lines
 
 
@@ -281,7 +282,7 @@ def dock_processing(url_dock_address):
     with open('static/stopwords/russian_stopwords.pkl', 'rb') as file:
         stopwords = cloudpickle.load(file)
 
-# Извлечение ФИО:
+    # Извлечение ФИО:
     # Загрузка .word документа и преобразование в .txt
     text = docx2txt.process(f'{url_dock_address}')
     # Извлечение титульного листа
@@ -333,8 +334,9 @@ def dock_processing(url_dock_address):
     # Извлечение аннотации:
     # Выделим необходимые главы
     introduction_conclusion_lines = introduction_conclusion_extract(preprocessed_text_lines)
-    introduction_conclusion_lines = [s for s in introduction_conclusion_lines if
-                                     not re.search(".*изуч|осво|навык|умен|опыт|защит|квалиф|компетен.*", s.lower())]
+    introduction_conclusion_lines = [s for s in introduction_conclusion_lines if not re.search(
+        r"рис. \d+|рисунок \d+|табл. \d+|таблица \d+|приложение \d+|изуч|осво|навык|умен|опыт|защит|квалиф|компетен|выполнил|дата|тип практики",
+        s.lower())]
     introduction_conclusion_text = "\n".join(introduction_conclusion_lines)
     sentence_count = 5
     sumy_summarizer = TextRankSummarizer
@@ -347,8 +349,8 @@ def dock_processing(url_dock_address):
     # Преобразуем строки в цельный текст
     text_for_keywords = ' '.join(annotation_sentences_list)
     # Экстрактору Yake модели зададим параметры:
-    # Русскоязычная модель, фраза размерностью 2, мера схожести слов не более 50%, извелчение в количестве 10 фраз
-    yakeModel = KeywordExtractor(lan="ru", n=2, dedupLim=0.5, top=10)
+    # Русскоязычная модель, фраза размерностью 2, мера схожести слов не более 50%, извелчение в количестве 5 фраз
+    yakeModel = KeywordExtractor(lan="ru", n=2, dedupLim=0.5, top=5)
     # Извлечем ключевые слова
     yake_keywords = yakeModel.extract_keywords(text_for_keywords)
     keyword_list = []
