@@ -1,30 +1,16 @@
-import nltk
-from flask import Flask, request, jsonify, Response
-from package_NLP import dock_processing
-
-app = Flask(__name__)
-
-# Проверка установки необходимых пакетов
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt')
+from flask import Flask
+from routes import bp as routes_bp
 
 
-@app.route('/data', methods=['GET'])
-def get_data():
-    url = request.args.get('url')
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object('config.Config')
 
-    if not url:
-        return jsonify({'error': 'Missing URL parameter'}), 400
+    app.register_blueprint(routes_bp)
 
-    try:
-        json_dock_data = dock_processing(url)
-        # Возвращаем данные в ответе Flask
-        return Response(json_dock_data, content_type='application/json; charset=utf-8')
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    return app
 
 
 if __name__ == '__main__':
+    app = create_app()
     app.run(debug=True)
